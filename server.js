@@ -29,6 +29,7 @@ const promptUser = () => {
       const { choices } = answers;
       if (choices === 'View All Employees') {
         db.query('SELECT e.id AS employee_id, e.first_name, e.last_name, r.title AS job_title, d.department_name, r.salary, CONCAT(m.first_name, " ", m.last_name) AS manager_name FROM employee e LEFT JOIN employee m ON e.manager_id = m.id JOIN roles r ON e.role_id = r.id JOIN department d ON r.department_id = d.id;', function (err, results) {
+          if (err) throw err;
           console.table(results);
           promptUser();
         });
@@ -46,20 +47,21 @@ const promptUser = () => {
               message: 'What is the employees last name?'
             },
             {
-              type: 'list',
-              name: 'role',
-              message: 'What is the employees role?',
-              choices: ['Sales Lead', 'Salesperson', 'Lead Engineer', 'Software Engineer', 'Accountant Manager', 'Accountant', 'Legal Team Lead', 'Lawyer']
+              type: 'input',
+              name: 'role_id',
+              message: 'What is the ID of the employees role?',
             },
             {
-              type: 'list',
-              name: 'manager',
-              message: 'Who is the employees manager?',
-              choices: ['John Doe', 'Mike Chan', 'Ashley Rodriguez', 'Kevin Tupik', 'Malia Brown', 'Sarah Lourd', 'Tom Allen', 'Tanya Sinclair', 'None']
+              type: 'input',
+              name: 'manager_id',
+              message: 'What is the ID of employees manager?',
+            
             }])
           .then((answers) => {
-            const { first_name, last_name, role, manager } = answers;
-            db.query('INSERT INTO employee (first_name, last_name, role, manager) VALUES (?, ?, ?, ?)', [first_name, last_name, role, manager], function (err, results) {
+            const { first_name, last_name, role_id, manager_id } = answers;
+    
+            db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [first_name, last_name, role_id, manager_id], function (err, results) {
+              if (err) throw err;
               console.table(results);
               console.log(
                 `Employee ${first_name} ${last_name} has been added to the database.`
@@ -69,6 +71,13 @@ const promptUser = () => {
           })
         // Add Employee logic here
       } else if (choices === 'Update Employee Role') {
+  db.query('SELECT id,title FROM roles', function (err, results){
+    var roleChoices = results.map(({id,title}) => ({
+      name: title,
+      value: id
+    }))
+
+
         inquirer
           .prompt([
             {
@@ -79,21 +88,26 @@ const promptUser = () => {
             },
             {
               type: 'list',
-              name: 'role',
+              name: 'role_id',
               message: 'What is the employees new role?',
-              choices: ['Sales Lead', 'Salesperson', 'Lead Engineer', 'Software Engineer', 'Accountant Manager', 'Accountant', 'Legal Team Lead', 'Lawyer']
+              choices: roleChoices
             }
           ])
           .then((answers) => {
-            const { employee, role } = answers;
-            db.query('UPDATE employee SET role = ? WHERE employee = ?', [answers.role, answers.employee], function (err, results) {
+            const { employee, role_id} = answers;
+            const employeesName = employee.split(" ");
+            db.query('UPDATE employee SET role_id= ? WHERE first_name = ? and last_name = ?', [role_id, employeesName[0], employeesName[1]], function (err, results) {
+              if (err) throw err;
               console.table(results);
               console.log(
                 `Employee ${employee} has been updated.`
               )
+
+
               promptUser();
             });
           })
+        })
       } else if (choices === 'View All Roles') {
         db.query('SELECT roles.id, roles.title, department.department_name AS department, roles.salary FROM roles LEFT JOIN department on roles.department_id = department.id;', function (err, results) {
           console.table(results);
@@ -113,10 +127,9 @@ const promptUser = () => {
               message: 'What is the salary of the role?'
             },
             {
-              type: 'list',
+              type: 'input',
               name: 'department_id',
-              message: 'What department does the role belong to?',
-              choices: ['Sales', 'Engineering', 'Finance', 'Legal']
+              message: 'What is the department ID?',
             }
           ])
           .then((answers) => {
